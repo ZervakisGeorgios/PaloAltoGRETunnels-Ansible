@@ -1,0 +1,2 @@
+# store the provider's details IP, username, password and then encrypt the file
+ansible-vault encrypt var.syml
