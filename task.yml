@@ -1,0 +1,50 @@
+---
+
+- name: Configure GRE tunnels
+  hosts: all
+  gather_facts: false
+  connection: local
+
+  roles:
+    - role: PaloAltoNetworks.paloaltonetworks
+
+  tasks:
+    - name: include variables
+      include_vars: vars.yml
+      no_log: 'yes'
+
+    - name: Create Tunnel Int
+      panos_tunnel:
+        provider: '{{ provider }}'
+        if_name: "{{ item.tunnel }}"
+        ip: ["{{ item.ip }}"]
+        comment: "{{ item.comment }}"
+        vr_name: "egboxf-lab-fw01-vrt"
+        zone_name: "red_zn"
+        # management_profile: ""
+        mtu: 1476
+        # there is a commit command for this task with default yes
+      loop:
+        - { tunnel : tunnel.11, ip : 10.1.1.1/32, comment: My_great_comment }
+        - { tunnel : tunnel.12, ip : 10.1.1.2/32, comment: My_Second_great_Demo }
+        - { tunnel : tunnel.13, ip : 10.1.1.3/32, comment: My_Second_g_Demo }
+
+    - name: Create GRE tunnel
+      panos_gre_tunnel:
+        provider: '{{ provider }}'
+        name: '{{ item.name }}'
+        interface: 'ethernet1/5'
+        local_address_value: '172.168.0.1/24'
+        peer_address: '{{ item.peer_ip }}'
+        tunnel_interface: '{{ item.tunnel }}'
+        ttl: 42
+        enable_keep_alive: "yes"
+        #nthe defaults keep alives are applied if not otherwise specified
+      loop:
+        - { name : AWS_Name_connection1, tunnel : tunnel.11, peer_ip : 172.168.0.1 }
+        - { name : AWS_Name_connection2, tunnel : tunnel.12, peer_ip : 172.168.0.6 }
+        - { name : AWS_Name_connection3, tunnel : tunnel.13, peer_ip : 172.168.0.3 }
+
+    - name: commit candidate config on firewall
+      panos_commit:
+        provider: '{{ provider }}'
